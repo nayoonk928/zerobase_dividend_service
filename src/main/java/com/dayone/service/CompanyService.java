@@ -97,8 +97,16 @@ public class CompanyService {
 
     public String deleteCompany(String ticker) {
         // 1. 배당금 정보 삭제
+        var company = this.companyRepository.findByTicker(ticker)
+                .orElseThrow(() -> new RuntimeException("존재하지 않는 회사입니다."));
+
         // 2. 회사 정보 삭제
-        throw new NotYetImplementedException();
+        this.dividendRepository.deleteAllByCompanyId(company.getId());
+        this.companyRepository.delete(company);
+
+        // 트라이에 있는 데이터도 삭제
+        this.deleteAutocompleteKeyword(company.getName());
+        return company.getName();
     }
 
 }
