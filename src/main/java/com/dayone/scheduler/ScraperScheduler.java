@@ -33,7 +33,7 @@ public class ScraperScheduler {
     @CacheEvict(value = CacheKey.KEY_FINANCE, allEntries = true)
     @Scheduled(cron = "${scheduler.scrap.yahoo}")
     public void yahooFinanceScheduling() {
-        //log.info("scraping scheduler is started");
+        log.info("scraping scheduler is started");
         // 저장된 회사 목록을 조회
         List<CompanyEntity> companies = this.companyRepository.findAll();
 
@@ -42,10 +42,7 @@ public class ScraperScheduler {
             log.info("scraping scheduler is started -> " + company.getName());
             ScrapedResult scrapedResult =
                     this.yahooFinanceScraper.scrap (
-                            Company.builder()
-                                    .name(company.getName())
-                                    .ticker(company.getTicker())
-                                    .build());
+                            new Company(company.getTicker(), company.getName()));
 
             // 스크래핑한 배당금 정보 중 데이터베이스에 없는 값은 저장
             scrapedResult.getDividends().stream()
