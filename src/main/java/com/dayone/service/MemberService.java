@@ -29,14 +29,17 @@ public class MemberService implements UserDetailsService {
 
     public MemberEntity register(Auth.SignUp member) {
         // 아이디가 존재하는 경우 exception 발생
-        boolean exists = false; // not implemented yet
+        boolean exists = this.memberRepository.existsByUsername(member.getUsername());
         if (exists) {
             throw new AlreadyExistUserException();
         }
 
         // ID 생성 가능한 경우, 멤버 테이블에 저장
         // 비밀번호는 암호화 되어서 저장되어야함
-        throw new NotYetImplementedException();
+        member.setPassword(this.passwordEncoder.encode(member.getPassword()));
+        var result = this.memberRepository.save(member.toEntity());
+
+        return result;
     }
 
     public MemberEntity authenticate(Auth.SignIn member) {
