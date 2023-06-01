@@ -37,6 +37,7 @@ public class CompanyService {
     private final DividendRepository dividendRepository;
 
     public Company save(String ticker) {
+        log.info("Saving company with ticker: {}", ticker);
         boolean exists = this.companyRepository.existsByTicker(ticker);
         if (exists) {
             throw new RuntimeException("already exists ticker -> " + ticker);
@@ -45,10 +46,14 @@ public class CompanyService {
     }
 
     public Page<CompanyEntity> getAllCompany(Pageable pageable) {
-        return this.companyRepository.findAll(pageable);
+        log.info("Getting all companies with page: {}", pageable);
+        Page<CompanyEntity> companies = this.companyRepository.findAll(pageable);
+        log.info("Retrieved {} companies with page: {}", companies.getTotalElements(), pageable);
+        return companies;
     }
 
     private Company storeCompanyAndDividend(String ticker) {
+        log.info("Storing company and dividend information for ticker: {}", ticker);
         // 1. ticker 를 기준으로 회사를 스크래핑
         Company company = this.yahooFinanceScraper.scrapCompanyByTicker(ticker);
         if (ObjectUtils.isEmpty(company)) {
@@ -63,22 +68,29 @@ public class CompanyService {
                 this.companyRepository.save(new CompanyEntity(company));
         List<DividendEntity> dividendEntityList =
                 scrapedResult.getDividends().stream()
-                .map(e -> new DividendEntity(companyEntity.getId(), e))
-                .collect(Collectors.toList());
+                        .map(e -> new DividendEntity(companyEntity.getId(), e))
+                        .collect(Collectors.toList());
 
         this.dividendRepository.saveAll(dividendEntityList);
+
+        log.info("Company and dividend information stored successfully for ticker: {}", ticker);
 
         return company;
     }
 
     public List<String> getCompanyNamesByKeyword(String keyword) {
+        log.info("Getting company names by keyword: {}", keyword);
         Pageable limit = PageRequest.of(0, 10);
         Page<CompanyEntity> companyEntities =
                 this.companyRepository.findByNameStartingWithIgnoreCase(keyword, limit);
 
-        return companyEntities.stream()
-                        .map(e -> e.getName())
-                        .collect(Collectors.toList());
+        List<String> companyNames = companyEntities.stream()
+                .map(e -> e.getName())
+                .collect(Collectors.toList());
+
+        log.info("Retrieved {} company names by keyword: {}", companyNames.size(), keyword);
+
+        return companyNames;
     }
 
     public void addAutocompleteKeyword(String keyword) {
@@ -96,9 +108,10 @@ public class CompanyService {
     }
 
     public String deleteCompany(String ticker) {
+        log.info("Deleting company with ticker: {}", ticker);
         // 1. 배당금 정보 삭제
         var company = this.companyRepository.findByTicker(ticker)
-                .orElseThrow(() -> new RuntimeException("존재하지 않는 회사입니다."));
+                .orElseThrow(() -> new NoCompanyException());
 
         // 2. 회사 정보 삭제
         this.dividendRepository.deleteAllByCompanyId(company.getId());
@@ -106,6 +119,9 @@ public class CompanyService {
 
         // 트라이에 있는 데이터도 삭제
         this.deleteAutocompleteKeyword(company.getName());
+
+        log.info("Company with ticker {} deleted successfully", ticker);
+
         return company.getName();
     }
 

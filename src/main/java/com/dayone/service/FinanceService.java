@@ -1,5 +1,6 @@
 package com.dayone.service;
 
+import com.dayone.exception.impl.NoCompanyException;
 import com.dayone.model.Company;
 import com.dayone.model.Dividend;
 import com.dayone.model.ScrapedResult;
@@ -29,9 +30,13 @@ public class FinanceService {
 
     @Cacheable(key = "#companyName", value = CacheKey.KEY_FINANCE)
     public ScrapedResult getDividendByCompanyName(String companyName) {
+        log.info("Getting dividend information for company: {}", companyName);
         // 1. 회사명을 기준으로 회사 정보를 조회
         CompanyEntity company = this.companyRepository.findByName(companyName)
-                .orElseThrow(() -> new RuntimeException("존재하지 않는 회사명입니다"));
+                .orElseThrow(() -> {
+                    log.error("Company not found with name: {}", companyName);
+                    return new NoCompanyException();
+                });
 
         // 2. 조회된 회사 ID 로 배당금 정보 조회
         List<DividendEntity> dividendEntities =
@@ -39,12 +44,11 @@ public class FinanceService {
 
         // 3. 결과 조합 후 반환
         List<Dividend> dividends = dividendEntities.stream()
-                                    .map(e -> new Dividend(e.getDate(), e.getDividend()))
-                                    .collect(Collectors.toList());
+                .map(e -> new Dividend(e.getDate(), e.getDividend()))
+                .collect(Collectors.toList());
 
-        return new ScrapedResult(new Company(company.getTicker(), company.getName())
-                                    ,dividends);
+        log.info("Dividend information retrieved successfully for company: {}", companyName);
 
-        //throw new NotYetImplementedException();
+        return new ScrapedResult(new Company(company.getTicker(), company.getName()), dividends);
     }
 }
