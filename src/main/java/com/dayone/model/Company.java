@@ -1,5 +1,6 @@
 package com.dayone.model;
 
+import com.dayone.persist.entity.CompanyEntity;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

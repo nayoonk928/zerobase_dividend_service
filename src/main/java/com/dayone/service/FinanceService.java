@@ -1,24 +1,24 @@
 package com.dayone.service;
 
-import com.dayone.exception.impl.NoCompanyException;
 import com.dayone.model.Company;
 import com.dayone.model.Dividend;
 import com.dayone.model.ScrapedResult;
-import com.dayone.model.constants.CacheKey;
+import com.dayone.model.constant.CacheKey;
+import com.dayone.exception.ScrapException;
 import com.dayone.persist.CompanyRepository;
 import com.dayone.persist.DividendRepository;
 import com.dayone.persist.entity.CompanyEntity;
 import com.dayone.persist.entity.DividendEntity;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.cfg.NotYetImplementedException;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static com.dayone.type.ErrorCode.COMPANY_NOT_FOUND;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @Slf4j
 @Service
@@ -35,7 +35,7 @@ public class FinanceService {
         CompanyEntity company = this.companyRepository.findByName(companyName)
                 .orElseThrow(() -> {
                     log.error("Company not found with name: {}", companyName);
-                    return new NoCompanyException();
+                    return new ScrapException(COMPANY_NOT_FOUND, BAD_REQUEST);
                 });
 
         // 2. 조회된 회사 ID 로 배당금 정보 조회

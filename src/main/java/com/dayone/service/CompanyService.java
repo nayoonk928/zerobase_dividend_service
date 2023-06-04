@@ -1,9 +1,8 @@
 package com.dayone.service;
 
-import com.dayone.exception.impl.NoCompanyException;
 import com.dayone.model.Company;
 import com.dayone.model.ScrapedResult;
-import com.dayone.model.constants.CacheKey;
+import com.dayone.exception.ScrapException;
 import com.dayone.persist.CompanyRepository;
 import com.dayone.persist.DividendRepository;
 import com.dayone.persist.entity.CompanyEntity;
@@ -12,9 +11,6 @@ import com.dayone.scraper.Scraper;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.Trie;
-import org.apache.commons.collections4.trie.PatriciaTrie;
-import org.hibernate.cfg.NotYetImplementedException;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +19,10 @@ import org.springframework.util.ObjectUtils;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static com.dayone.type.ErrorCode.COMPANY_ALREADY_SAVED;
+import static com.dayone.type.ErrorCode.COMPANY_NOT_FOUND;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @Slf4j
 @Service
@@ -40,7 +40,7 @@ public class CompanyService {
         log.info("Saving company with ticker: {}", ticker);
         boolean exists = this.companyRepository.existsByTicker(ticker);
         if (exists) {
-            throw new RuntimeException("already exists ticker -> " + ticker);
+            throw new ScrapException(COMPANY_ALREADY_SAVED, BAD_REQUEST);
         }
         return this.storeCompanyAndDividend(ticker);
     }
@@ -48,7 +48,6 @@ public class CompanyService {
     public Page<CompanyEntity> getAllCompany(Pageable pageable) {
         log.info("Getting all companies with page: {}", pageable);
         Page<CompanyEntity> companies = this.companyRepository.findAll(pageable);
-        log.info("Retrieved {} companies with page: {}", companies.getTotalElements(), pageable);
         return companies;
     }
 
@@ -57,7 +56,7 @@ public class CompanyService {
         // 1. ticker 를 기준으로 회사를 스크래핑
         Company company = this.yahooFinanceScraper.scrapCompanyByTicker(ticker);
         if (ObjectUtils.isEmpty(company)) {
-            throw new RuntimeException("failed to scrap ticker -> " + ticker);
+            throw new ScrapException(COMPANY_NOT_FOUND, BAD_REQUEST);
         }
 
         // 2. 해당 회사가 존재할 경우, 회사의 배당금 정보를 스크래핑
@@ -73,8 +72,6 @@ public class CompanyService {
 
         this.dividendRepository.saveAll(dividendEntityList);
 
-        log.info("Company and dividend information stored successfully for ticker: {}", ticker);
-
         return company;
     }
 
@@ -87,8 +84,6 @@ public class CompanyService {
         List<String> companyNames = companyEntities.stream()
                 .map(e -> e.getName())
                 .collect(Collectors.toList());
-
-        log.info("Retrieved {} company names by keyword: {}", companyNames.size(), keyword);
 
         return companyNames;
     }
@@ -111,7 +106,7 @@ public class CompanyService {
         log.info("Deleting company with ticker: {}", ticker);
         // 1. 배당금 정보 삭제
         var company = this.companyRepository.findByTicker(ticker)
-                .orElseThrow(() -> new NoCompanyException());
+                .orElseThrow(() -> new ScrapException(COMPANY_NOT_FOUND, BAD_REQUEST));
 
         // 2. 회사 정보 삭제
         this.dividendRepository.deleteAllByCompanyId(company.getId());
@@ -119,8 +114,6 @@ public class CompanyService {
 
         // 트라이에 있는 데이터도 삭제
         this.deleteAutocompleteKeyword(company.getName());
-
-        log.info("Company with ticker {} deleted successfully", ticker);
 
         return company.getName();
     }

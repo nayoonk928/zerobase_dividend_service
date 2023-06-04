@@ -3,7 +3,7 @@ package com.dayone.scraper;
 import com.dayone.model.Company;
 import com.dayone.model.Dividend;
 import com.dayone.model.ScrapedResult;
-import com.dayone.model.constants.Month;
+import com.dayone.model.constant.Month;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -64,7 +64,6 @@ public class YahooFinanceScraper implements Scraper {
             scrapResult.setDividends(dividends);
 
         } catch (IOException e) {
-            // TODO error handling
             e.printStackTrace();
         }
 

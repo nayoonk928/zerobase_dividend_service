@@ -1,4 +1,4 @@
-package com.dayone.model.constants;
+package com.dayone.model.constant;
 
 public enum Authority {
 

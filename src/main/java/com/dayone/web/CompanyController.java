@@ -1,19 +1,22 @@
 package com.dayone.web;
 
 import com.dayone.model.Company;
-import com.dayone.model.constants.CacheKey;
+import com.dayone.model.constant.CacheKey;
 import com.dayone.persist.entity.CompanyEntity;
+import com.dayone.exception.ScrapException;
 import com.dayone.service.CompanyService;
+import com.dayone.type.ErrorCode;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.ObjectUtils;
 import org.springframework.web.bind.annotation.*;
+
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @Slf4j
 @RestController
@@ -32,8 +35,7 @@ public class CompanyController {
      */
     @GetMapping("/autocomplete")
     public ResponseEntity<?> autocomplete(@RequestParam String keyword) {
-        var result = this.companyService.getCompanyNamesByKeyword(keyword);
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(this.companyService.getCompanyNamesByKeyword(keyword));
     }
 
     /**
@@ -58,7 +60,7 @@ public class CompanyController {
     public ResponseEntity<?> addCompany(@RequestBody Company request) {
         String ticker = request.getTicker().trim();
         if (ObjectUtils.isEmpty(ticker)) {
-            throw new RuntimeException("ticker is empty");
+            throw new ScrapException(ErrorCode.INVALID_TICKER, BAD_REQUEST);
         }
 
         Company company = this.companyService.save(ticker);
